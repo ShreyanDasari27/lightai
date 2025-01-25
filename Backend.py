@@ -5,9 +5,10 @@ from fuzzywuzzy import process
 import logging
 from datetime import datetime
 import json
+import os  # For accessing environment variables
 
-# Configure the API Key
-API_KEY = 'AIzaSyA_JwM_e6lVwiIkQy-B22Jat2yDhlpfN4c'
+# Configure the API Key from environment variable
+API_KEY = os.getenv("API_KEY")
 ai.configure(api_key=API_KEY)
 
 # Set up logging
