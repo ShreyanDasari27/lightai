@@ -90,7 +90,7 @@
       chatLog.innerHTML += `<p><span class="user">You:</span> ${userMessage}</p>`;
       chatInput.value = '';
 
-      // Send the message to the backend
+      // Send the message to the /chat endpoint
       try {
         const response = await fetch('/chat', {
           method: 'POST',
