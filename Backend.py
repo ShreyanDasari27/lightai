@@ -92,6 +92,11 @@ def chat():
         logging.error(f"Error handling request: {e}")
         return jsonify({"error": "An error occurred processing your request."}), 500
 
+# Default route for root URL
+@app.route('/')
+def home():
+    return "Welcome to LightAI Chatbot! Use the /chat endpoint to interact with the bot."
+
 # Run Flask server
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable
