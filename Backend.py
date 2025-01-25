@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import google.generativeai as ai
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
@@ -15,7 +15,7 @@ ai.configure(api_key=API_KEY)
 logging.basicConfig(filename='lightai_chat.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='public', static_url_path='')
 
 # Initialize the Generative Model and Start Chat
 class LightAIChat:
@@ -92,10 +92,10 @@ def chat():
         logging.error(f"Error handling request: {e}")
         return jsonify({"error": "An error occurred processing your request."}), 500
 
-# Default route for root URL
+# Default route for serving the HTML frontend
 @app.route('/')
 def home():
-    return "Welcome to LightAI Chatbot! Use the /chat endpoint to interact with the bot."
+    return send_from_directory('public', 'index.html')
 
 # Run Flask server
 if __name__ == "__main__":
