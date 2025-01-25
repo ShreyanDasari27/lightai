@@ -15,7 +15,7 @@ ai.configure(api_key=API_KEY)
 logging.basicConfig(filename='lightai_chat.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # Initialize Flask app
-app = Flask(__name__, static_folder='public', static_url_path='')
+app = Flask(__name__, static_folder='.', static_url_path='')
 
 # Initialize the Generative Model and Start Chat
 class LightAIChat:
@@ -95,7 +95,7 @@ def chat():
 # Default route for serving the HTML frontend
 @app.route('/')
 def home():
-    return send_from_directory('public', 'index.html')
+    return send_from_directory('.', 'index.html')
 
 # Run Flask server
 if __name__ == "__main__":
