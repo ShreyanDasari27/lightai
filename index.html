@@ -34,33 +34,29 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      text-align: center;
     }
 
-    .message {
+    .chat-message {
       margin: 15px 0;
     }
 
-    .message span {
+    .chat-message span {
       display: block;
       padding: 15px;
       border-radius: 8px;
       background-color: #3c3c3c;
-      max-width: 80%;
       margin: 0 auto;
       word-wrap: break-word;
+      max-width: 90%;
     }
 
     .chat-log .section-title {
       font-weight: bold;
       margin-bottom: 5px;
-      text-align: left;
-      padding-left: 10px;
     }
 
     .chat-log .key-points {
-      text-align: left;
-      padding-left: 30px;
+      margin-top: 5px;
       margin-bottom: 15px;
     }
 
@@ -70,9 +66,7 @@
 
     .chat-log .code-block {
       background-color: #1e1e1e;
-      color: #e8e8e8;
       padding: 15px;
-      margin-top: 10px;
       font-family: monospace;
       border: 1px solid #444;
       border-radius: 5px;
@@ -95,10 +89,6 @@
       color: white;
     }
 
-    .chat-input input::placeholder {
-      color: #999;
-    }
-
     .chat-input button {
       padding: 15px 20px;
       background-color: #4a90e2;
@@ -108,42 +98,29 @@
       cursor: pointer;
     }
 
-    .chat-input button:hover {
-      background-color: #3c7fd9;
-    }
-
     .loading {
       font-style: italic;
       color: #999;
-      display: inline-block;
     }
 
     .loading span {
-      display: inline-block;
       animation: blink 1.5s infinite;
     }
 
-    .loading span:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-
-    .loading span:nth-child(3) {
-      animation-delay: 0.4s;
-    }
-
     @keyframes blink {
-      0%, 100% {
-        opacity: 0;
-      }
-      50% {
-        opacity: 1;
-      }
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
     }
   </style>
 </head>
 <body>
   <div class="chat-container">
-    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-log" id="chatLog">
+      <!-- Default assistant greeting -->
+      <div class="chat-message">
+        <span>I am LightAI, your assistant. How can I help you today?</span>
+      </div>
+    </div>
     <div class="chat-input">
       <input type="text" id="chatInput" placeholder="Type your message..." />
       <button id="sendButton">Send</button>
@@ -155,16 +132,14 @@
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
 
-    // Function to add regular text messages
-    function addMessage(type, message) {
+    function addMessage(message) {
       const messageDiv = document.createElement('div');
-      messageDiv.classList.add('message');
+      messageDiv.classList.add('chat-message');
       messageDiv.innerHTML = `<span>${message}</span>`;
       chatLog.appendChild(messageDiv);
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Function to add sections with key points
     function addSection(title, points) {
       const titleDiv = document.createElement('div');
       titleDiv.classList.add('section-title');
@@ -183,76 +158,52 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Function to add code blocks
-    function addCodeBlock(code) {
-      const codeDiv = document.createElement('div');
-      codeDiv.classList.add('code-block');
-      codeDiv.textContent = code;
-      chatLog.appendChild(codeDiv);
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
-    // Function to send a message
     async function sendMessage() {
       const userMessage = chatInput.value.trim();
       if (!userMessage) return;
 
-      // Add user message to chat log
-      addMessage('user', userMessage);
+      // Add user message
+      addMessage(`You: ${userMessage}`);
       chatInput.value = '';
 
-      // Add loading animation
+      // Add loading message
       const loadingMessage = document.createElement('div');
-      loadingMessage.classList.add('message');
+      loadingMessage.classList.add('chat-message');
       loadingMessage.innerHTML = `<span class="loading">Loading<span>.</span><span>.</span><span>.</span></span>`;
       chatLog.appendChild(loadingMessage);
       chatLog.scrollTop = chatLog.scrollHeight;
 
       try {
-        // Fetch response from server
         const response = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userMessage }),
+          body: JSON.stringify({ message: userMessage })
         });
-        const data = await response.json();
 
-        // Remove loading animation
+        const data = await response.json();
         chatLog.removeChild(loadingMessage);
 
-        // Format and display the response
+        // Format response into sections
         const sections = parseResponse(data.response);
         sections.forEach(section => {
-          if (section.type === 'text') {
-            addMessage('bot', section.content);
-          } else if (section.type === 'points') {
-            addSection(section.title, section.points);
-          } else if (section.type === 'code') {
-            addCodeBlock(section.content);
-          }
+          if (section.type === 'text') addMessage(section.content);
+          else if (section.type === 'points') addSection(section.title, section.points);
         });
       } catch (error) {
-        // Handle errors
         chatLog.removeChild(loadingMessage);
-        addMessage('bot', 'Sorry, there was an error processing your request.');
+        addMessage('Sorry, there was an error processing your request.');
       }
     }
 
-    // Function to parse the response into sections
     function parseResponse(response) {
-      const lines = response.split('\n');
       const sections = [];
+      const lines = response.split('\n');
       let currentSection = null;
 
       lines.forEach(line => {
         if (line.startsWith('###')) {
           if (currentSection) sections.push(currentSection);
           currentSection = { type: 'points', title: line.replace('###', '').trim(), points: [] };
-        } else if (line.startsWith('Code:')) {
-          if (currentSection) sections.push(currentSection);
-          currentSection = { type: 'code', content: line.replace('Code:', '').trim() };
-          sections.push(currentSection);
-          currentSection = null;
         } else if (currentSection && currentSection.type === 'points') {
           currentSection.points.push(line.trim());
         } else {
@@ -265,7 +216,6 @@
       return sections;
     }
 
-    // Event listeners
     sendButton.addEventListener('click', sendMessage);
     chatInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
