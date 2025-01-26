@@ -20,11 +20,12 @@
       display: flex;
       flex-direction: column;
       width: 100%;
-      height: 100%;
       max-width: 800px;
+      height: 100%;
       background-color: #2b2b2b;
       border-radius: 8px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
     }
 
     .chat-log {
@@ -37,45 +38,43 @@
     }
 
     .chat-message {
-      margin: 15px 0;
-    }
-
-    .chat-message span {
-      display: block;
-      padding: 15px;
-      border-radius: 8px;
       background-color: #3c3c3c;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 90%;
       margin: 0 auto;
       word-wrap: break-word;
-      max-width: 90%;
     }
 
-    .chat-log .section-title {
+    .chat-message.user {
+      background-color: #444;
+      color: #ffffff;
+    }
+
+    .chat-message.bot {
+      background-color: #2d2d2d;
+      color: #e8e8e8;
+    }
+
+    .section-title {
       font-weight: bold;
       margin-bottom: 5px;
     }
 
-    .chat-log .key-points {
+    .key-points {
       margin-top: 5px;
       margin-bottom: 15px;
+      padding-left: 20px;
     }
 
-    .chat-log .key-points li {
+    .key-points li {
       margin-bottom: 5px;
-    }
-
-    .chat-log .code-block {
-      background-color: #1e1e1e;
-      padding: 15px;
-      font-family: monospace;
-      border: 1px solid #444;
-      border-radius: 5px;
-      overflow-x: auto;
     }
 
     .chat-input {
       display: flex;
-      padding: 20px;
+      padding: 10px;
+      background-color: #2b2b2b;
       border-top: 1px solid #444;
     }
 
@@ -90,26 +89,66 @@
     }
 
     .chat-input button {
-      padding: 15px 20px;
-      background-color: #4a90e2;
-      color: white;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: white;
       border: none;
-      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .chat-input button:hover {
+      background-color: #e8e8e8;
+    }
+
+    .chat-input button:focus {
+      outline: none;
+    }
+
+    .chat-input button::after {
+      content: "→";
+      font-size: 20px;
+      color: black;
     }
 
     .loading {
-      font-style: italic;
-      color: #999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      color: #aaa;
     }
 
     .loading span {
-      animation: blink 1.5s infinite;
+      display: inline-block;
+      margin: 0 3px;
+      font-size: 20px;
+      animation: wave 1.5s infinite;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 0; }
-      50% { opacity: 1; }
+    .loading span:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    .loading span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .loading span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes wave {
+      0%, 100% {
+        opacity: 0.2;
+      }
+      50% {
+        opacity: 1;
+      }
     }
   </style>
 </head>
@@ -117,13 +156,13 @@
   <div class="chat-container">
     <div class="chat-log" id="chatLog">
       <!-- Default assistant greeting -->
-      <div class="chat-message">
-        <span>I am LightAI, your assistant. How can I help you today?</span>
+      <div class="chat-message bot">
+        I am LightAI, your assistant. How can I help you today?
       </div>
     </div>
     <div class="chat-input">
       <input type="text" id="chatInput" placeholder="Type your message..." />
-      <button id="sendButton">Send</button>
+      <button id="sendButton"></button>
     </div>
   </div>
 
@@ -132,29 +171,11 @@
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
 
-    function addMessage(message) {
+    function addMessage(message, userType) {
       const messageDiv = document.createElement('div');
-      messageDiv.classList.add('chat-message');
-      messageDiv.innerHTML = `<span>${message}</span>`;
+      messageDiv.classList.add('chat-message', userType);
+      messageDiv.innerHTML = message;
       chatLog.appendChild(messageDiv);
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
-    function addSection(title, points) {
-      const titleDiv = document.createElement('div');
-      titleDiv.classList.add('section-title');
-      titleDiv.textContent = title;
-
-      const pointsList = document.createElement('ul');
-      pointsList.classList.add('key-points');
-      points.forEach(point => {
-        const listItem = document.createElement('li');
-        listItem.textContent = point;
-        pointsList.appendChild(listItem);
-      });
-
-      chatLog.appendChild(titleDiv);
-      chatLog.appendChild(pointsList);
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
@@ -163,14 +184,14 @@
       if (!userMessage) return;
 
       // Add user message
-      addMessage(`You: ${userMessage}`);
+      addMessage(userMessage, 'user');
       chatInput.value = '';
 
-      // Add loading message
-      const loadingMessage = document.createElement('div');
-      loadingMessage.classList.add('chat-message');
-      loadingMessage.innerHTML = `<span class="loading">Loading<span>.</span><span>.</span><span>.</span></span>`;
-      chatLog.appendChild(loadingMessage);
+      // Add loading animation
+      const loadingDiv = document.createElement('div');
+      loadingDiv.classList.add('loading');
+      loadingDiv.innerHTML = '<span>.</span><span>.</span><span>.</span>';
+      chatLog.appendChild(loadingDiv);
       chatLog.scrollTop = chatLog.scrollHeight;
 
       try {
@@ -181,39 +202,28 @@
         });
 
         const data = await response.json();
-        chatLog.removeChild(loadingMessage);
+        chatLog.removeChild(loadingDiv);
 
         // Format response into sections
-        const sections = parseResponse(data.response);
-        sections.forEach(section => {
-          if (section.type === 'text') addMessage(section.content);
-          else if (section.type === 'points') addSection(section.title, section.points);
-        });
+        const formattedResponse = formatResponse(data.response);
+        addMessage(formattedResponse, 'bot');
       } catch (error) {
-        chatLog.removeChild(loadingMessage);
-        addMessage('Sorry, there was an error processing your request.');
+        chatLog.removeChild(loadingDiv);
+        addMessage('Sorry, there was an error processing your request.', 'bot');
       }
     }
 
-    function parseResponse(response) {
-      const sections = [];
-      const lines = response.split('\n');
-      let currentSection = null;
-
-      lines.forEach(line => {
-        if (line.startsWith('###')) {
-          if (currentSection) sections.push(currentSection);
-          currentSection = { type: 'points', title: line.replace('###', '').trim(), points: [] };
-        } else if (currentSection && currentSection.type === 'points') {
-          currentSection.points.push(line.trim());
+    function formatResponse(response) {
+      const sections = response.split('\n');
+      return sections.map(section => {
+        if (section.startsWith('###')) {
+          return `<div class="section-title">${section.replace('###', '').trim()}</div>`;
+        } else if (section.startsWith('-')) {
+          return `<ul class="key-points"><li>${section.replace('-', '').trim()}</li></ul>`;
         } else {
-          if (currentSection) sections.push(currentSection);
-          currentSection = { type: 'text', content: line.trim() };
+          return `<p>${section}</p>`;
         }
-      });
-
-      if (currentSection) sections.push(currentSection);
-      return sections;
+      }).join('');
     }
 
     sendButton.addEventListener('click', sendMessage);
