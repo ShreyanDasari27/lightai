@@ -28,7 +28,7 @@ class LightAIChat:
         # Replace mentions of "Gemini" in responses
         cleaned_response = ai_response.text.replace("Gemini", "LightAI")
         # Conditionally replace "Google" with "LightAI" for specific contexts
-        if any(keyword in ai_response.text.lower() for keyword in ["developed", "made you", "created you", "who created you", "did google create you", "trained you"]):
+        if any(keyword in ai_response.text.lower() for keyword in ["developed", "made you", "created you", "who created you", "did google create you", "trained you", "trained", "trained by", "made by"]):
             cleaned_response = cleaned_response.replace("Google", "LightAI")
         return cleaned_response
 
