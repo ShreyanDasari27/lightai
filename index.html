@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LightAI Chatbot</title>
+  <!-- Add the favicon link -->
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
   <style>
     /* Existing CSS Styles */
 
@@ -241,16 +243,16 @@
       }
     }
   </style>
-</head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-VFM5YQDYN7"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VFM5YQDYN7"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
 
-  gtag('config', 'G-VFM5YQDYN7');
-</script>
+    gtag('config', 'G-VFM5YQDYN7');
+  </script>
+</head>
 <body>
   <div class="chat-container">
     <div class="chat-log" id="chatLog">
@@ -265,7 +267,7 @@
         <label for="fileInput" class="upload-button" title="Upload File">📎</label>
         <button id="sendButton"></button>
       </div>
-      <input type="file" id="fileInput" />
+      <input type="file" id="fileInput" accept=".txt" />
       <div id="selectedFile" class="file-name"></div>
     </div>
   </div>

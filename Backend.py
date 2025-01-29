@@ -7,21 +7,12 @@ import json
 import os
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
-import PyPDF2
-from PIL import Image
-import pytesseract
-import io
 
 # Configure the API Key from environment variable
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
     raise ValueError("API_KEY environment variable not set.")
 ai.configure(api_key=API_KEY)
-
-# Optional: Specify Tesseract path if not in PATH
-# Uncomment and set the correct path for your system
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
-# pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # macOS/Linux
 
 # Set up logging
 logging.basicConfig(
@@ -35,7 +26,7 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
 
 # Allowed file extensions
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'txt'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -111,25 +102,6 @@ def extract_text_from_file(file_storage):
         if file_extension == 'txt':
             logging.info("Extracting text from TXT file.")
             return file_storage.read().decode('utf-8')
-        elif file_extension == 'pdf':
-            logging.info("Extracting text from PDF file.")
-            reader = PyPDF2.PdfReader(file_storage)
-            text = ""
-            for page_num, page in enumerate(reader.pages, start=1):
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
-                    logging.debug(f"Extracted text from page {page_num}.")
-            return text if text else "No extractable text found in PDF."
-        elif file_extension in {'png', 'jpg', 'jpeg', 'gif'}:
-            logging.info("Extracting text from Image file.")
-            image = Image.open(file_storage)
-            if image.mode != 'RGB':
-                logging.info(f"Converting image mode from {image.mode} to RGB.")
-                image = image.convert('RGB')
-            text = pytesseract.image_to_string(image)
-            logging.debug("OCR extraction complete.")
-            return text if text else "No text found in image."
         else:
             logging.warning(f"Unsupported file type: {file_extension}")
             return "Unsupported file type for text extraction."
