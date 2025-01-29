@@ -1,16 +1,12 @@
 from flask import Flask, request, jsonify, send_from_directory
 import google.generativeai as ai
-from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
+from fuzzywuzzy import fuzz, process
 import logging
 from datetime import datetime
 import json
-import os  # For accessing environment variables
+import os
 from werkzeug.utils import secure_filename
-import tempfile
-import mimetypes
-
-# For processing different file types
+from werkzeug.exceptions import RequestEntityTooLarge
 import PyPDF2
 from PIL import Image
 import pytesseract
@@ -18,13 +14,25 @@ import io
 
 # Configure the API Key from environment variable
 API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY environment variable not set.")
 ai.configure(api_key=API_KEY)
 
-# Set up logging
-logging.basicConfig(filename='lightai_chat.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+# Optional: Specify Tesseract path if not in PATH
+# Uncomment and set the correct path for your system
+# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
+# pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # macOS/Linux
 
-# Initialize Flask app
+# Set up logging
+logging.basicConfig(
+    filename='lightai_chat.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# Initialize Flask app with MAX_CONTENT_LENGTH
 app = Flask(__name__, static_folder='.', static_url_path='')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -40,9 +48,6 @@ class LightAIChat:
 
     def send_message(self, message, file_content=None):
         if file_content:
-            # Modify this part based on how your API handles file content
-            # For example, if the API accepts file content as context or a separate input
-            # Here, we'll concatenate the file content with the message
             combined_message = f"{message}\n\nFile Content:\n{file_content}"
             ai_response = self.chat.send_message(combined_message)
         else:
@@ -61,13 +66,17 @@ class ChatHistory:
         self.history = []
 
     def add_message(self, user, message):
-        self.history.append({"user": user, "message": message, "timestamp": datetime.now().isoformat()})
+        self.history.append({
+            "user": user,
+            "message": message,
+            "timestamp": datetime.now().isoformat()
+        })
 
     def save_to_file(self, filename="chat_history.json"):
         with open(filename, "w") as file:
             json.dump(self.history, file, indent=4)
 
-# Instantiate the LightAIChat
+# Instantiate the LightAIChat and ChatHistory
 lightai_chat = LightAIChat()
 chat_history = ChatHistory()
 
@@ -96,34 +105,65 @@ def get_fuzzy_match(user_input, knowledge_base):
 def extract_text_from_file(file_storage):
     filename = secure_filename(file_storage.filename)
     file_extension = filename.rsplit('.', 1)[1].lower()
+    logging.info(f"Processing file: {filename} with extension: {file_extension}")
 
     try:
         if file_extension == 'txt':
+            logging.info("Extracting text from TXT file.")
             return file_storage.read().decode('utf-8')
         elif file_extension == 'pdf':
+            logging.info("Extracting text from PDF file.")
             reader = PyPDF2.PdfReader(file_storage)
             text = ""
-            for page in reader.pages:
-                text += page.extract_text() + "\n"
-            return text
+            for page_num, page in enumerate(reader.pages, start=1):
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+                    logging.debug(f"Extracted text from page {page_num}.")
+            return text if text else "No extractable text found in PDF."
         elif file_extension in {'png', 'jpg', 'jpeg', 'gif'}:
+            logging.info("Extracting text from Image file.")
             image = Image.open(file_storage)
+            if image.mode != 'RGB':
+                logging.info(f"Converting image mode from {image.mode} to RGB.")
+                image = image.convert('RGB')
             text = pytesseract.image_to_string(image)
-            return text
+            logging.debug("OCR extraction complete.")
+            return text if text else "No text found in image."
         else:
+            logging.warning(f"Unsupported file type: {file_extension}")
             return "Unsupported file type for text extraction."
     except Exception as e:
-        logging.error(f"Error extracting text from file: {e}")
+        logging.error(f"Error extracting text from file: {e}", exc_info=True)
         return "Error processing the uploaded file."
 
 # Function to handle user input and generate a response
 def handle_user_input(user_input, file_content=None):
-    matched_key = get_fuzzy_match(user_input, knowledge_base)
+    if not user_input and not file_content:
+        return "Please provide a message or upload a file."
+
+    matched_key = get_fuzzy_match(user_input, knowledge_base) if user_input else None
     if matched_key:
         response = knowledge_base[matched_key]
     else:
         response = lightai_chat.send_message(user_input, file_content=file_content)
     return response
+
+# Error handler for file size exceeded
+@app.errorhandler(RequestEntityTooLarge)
+def handle_large_file(error):
+    logging.warning("File size exceeded the maximum limit.")
+    return jsonify({"error": "File is too large. Maximum allowed size is 16MB."}), 413
+
+# Route to serve favicon.ico
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('.', 'favicon.ico')
+
+# Default route for serving the HTML frontend
+@app.route('/')
+def home():
+    return send_from_directory('.', 'index.html')
 
 # Define REST endpoint for chatbot
 @app.route('/chat', methods=['POST'])
@@ -132,38 +172,47 @@ def chat():
         user_input = ""
         file_content = None
 
-        if 'file' in request.files and request.files['file']:
-            file = request.files['file']
-            if file and allowed_file(file.filename):
-                # Extract text from the uploaded file
-                file_content = extract_text_from_file(file)
-                # Optionally, save the file to a temporary location
-                # with tempfile.NamedTemporaryFile(delete=True) as tmp:
-                #     file.save(tmp.name)
-            else:
-                return jsonify({"error": "Unsupported file type."}), 400
+        # Check if the request is multipart/form-data
+        if request.content_type.startswith('multipart/form-data'):
+            if 'file' in request.files and request.files['file']:
+                file = request.files['file']
+                if file and allowed_file(file.filename):
+                    logging.info(f"Received file: {file.filename}")
+                    file_content = extract_text_from_file(file)
+                    logging.info("File content extracted.")
+                    if file_content.startswith("Error") or "Unsupported" in file_content:
+                        logging.warning(f"File processing failed: {file_content}")
+                        return jsonify({"error": file_content}), 400
+                else:
+                    logging.warning("Unsupported file type or no file provided.")
+                    return jsonify({"error": "Unsupported file type."}), 400
 
-        # Handle both form data and JSON
-        if request.form:
+            # Handle form data
             user_input = request.form.get("message", "")
+            logging.info(f"Received message: {user_input}")
         elif request.is_json:
+            # Handle JSON data
             data = request.get_json()
             user_input = data.get("message", "")
+            logging.info(f"Received JSON message: {user_input}")
+        else:
+            logging.warning("Unsupported Media Type.")
+            return jsonify({"error": "Unsupported Media Type."}), 415
+
+        if not user_input and not file_content:
+            logging.warning("No message or file provided.")
+            return jsonify({"error": "No message or file provided."}), 400
 
         response = handle_user_input(user_input, file_content=file_content)
         chat_history.add_message("User", user_input if user_input else "Uploaded a file")
         chat_history.add_message("LightAI", response)
+        logging.info("Responded to user.")
         return jsonify({"response": response})
     except Exception as e:
-        logging.error(f"Error handling request: {e}")
+        logging.error(f"Error handling request: {e}", exc_info=True)
         return jsonify({"error": "An error occurred processing your request."}), 500
-
-# Default route for serving the HTML frontend
-@app.route('/')
-def home():
-    return send_from_directory('.', 'index.html')
 
 # Run Flask server
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
