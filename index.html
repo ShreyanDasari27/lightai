@@ -2,36 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LightAI Chatbot</title>
-  <!-- Add the favicon link -->
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <!-- Ensures proper scaling on mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LightAi v5</title>
   <style>
-    /* Existing CSS Styles */
-
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
       background-color: #1e1e1e;
       color: #e8e8e8;
     }
-
-    .chat-container {
+    .page-container {
       display: flex;
       flex-direction: column;
-      width: 100%;
-      max-width: 800px;
-      height: 100%;
+      height: 100vh;
+    }
+    .header {
       background-color: #2b2b2b;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 1px solid #444;
+    }
+    .main-content {
+      display: flex;
+      flex: 1;
       overflow: hidden;
     }
-
+    .sidebar {
+      background-color: #2b2b2b;
+      padding: 20px;
+      width: 250px;
+      border-right: 1px solid #444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #2b2b2b;
+      overflow: hidden;
+    }
     .chat-log {
       flex: 1;
       overflow-y: auto;
@@ -40,58 +58,31 @@
       flex-direction: column;
       gap: 20px;
     }
-
     .chat-message {
       background-color: #3c3c3c;
       padding: 15px;
       border-radius: 10px;
       max-width: 90%;
-      margin: 0 auto;
       word-wrap: break-word;
     }
-
     .chat-message.user {
       background-color: #444;
       color: #ffffff;
       align-self: flex-end;
     }
-
     .chat-message.bot {
       background-color: #2d2d2d;
       color: #e8e8e8;
       align-self: flex-start;
     }
-
-    .section-title {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    .key-points {
-      margin-top: 5px;
-      margin-bottom: 15px;
-      padding-left: 20px;
-    }
-
-    .key-points li {
-      margin-bottom: 5px;
-    }
-
-    .chat-input {
+    .chat-input-container {
       display: flex;
-      flex-direction: column;
       padding: 10px;
       background-color: #2b2b2b;
       border-top: 1px solid #444;
-    }
-
-    .input-row {
-      display: flex;
       align-items: center;
-      width: 100%;
     }
-
-    .chat-input input[type="text"] {
+    .chat-input-container input[type="text"] {
       flex: 1;
       padding: 15px;
       border: none;
@@ -100,41 +91,7 @@
       background-color: #444;
       color: white;
     }
-
-    .chat-input input[type="text"]::placeholder {
-      color: #bbb;
-    }
-
-    .chat-input input[type="file"] {
-      display: none;
-    }
-
-    .upload-button {
-      background-color: #444;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 10px;
-      cursor: pointer;
-      margin-right: 10px;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .upload-button:hover {
-      background-color: #555;
-    }
-
-    .file-name {
-      margin-top: 5px;
-      color: #aaa;
-      font-size: 14px;
-      word-break: break-all;
-    }
-
-    .chat-input button {
+    .chat-input-container button {
       width: 50px;
       height: 50px;
       border-radius: 50%;
@@ -145,23 +102,25 @@
       align-items: center;
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-      position: relative;
+      margin-right: 10px;
     }
-
-    .chat-input button:hover {
+    .chat-input-container button:hover {
       background-color: #e8e8e8;
     }
-
-    .chat-input button:focus {
+    .chat-input-container button:focus {
       outline: none;
     }
-
-    .chat-input button::after {
+    /* Button icons */
+    .chat-input-container button.send-btn::after {
       content: "→";
       font-size: 20px;
       color: black;
     }
-
+    .chat-input-container button.upload-btn::after {
+      content: "📎";
+      font-size: 20px;
+      color: black;
+    }
     .loading {
       display: flex;
       justify-content: center;
@@ -169,106 +128,71 @@
       padding: 15px;
       color: #aaa;
     }
-
     .loading span {
       display: inline-block;
       margin: 0 3px;
       font-size: 20px;
       animation: wave 1.5s infinite;
     }
-
     .loading span:nth-child(1) {
       animation-delay: 0s;
     }
-
     .loading span:nth-child(2) {
       animation-delay: 0.2s;
     }
-
     .loading span:nth-child(3) {
       animation-delay: 0.4s;
     }
-
     @keyframes wave {
-      0%, 100% {
-        opacity: 0.2;
-      }
-      50% {
-        opacity: 1;
-      }
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
     }
-
-    /* New CSS Styles for File Upload Functionality */
-
-    /* Style for Uploaded File Link */
-    .chat-message.file {
-      background-color: #444;
-      color: #ffffff;
-      text-align: center;
-      align-self: flex-end;
+    .section-title {
+      font-weight: bold;
+      margin-bottom: 5px;
     }
-
-    .chat-message.file a {
-      color: #4ea3ff;
-      text-decoration: none;
-      word-break: break-all;
+    .key-points {
+      margin-top: 5px;
+      margin-bottom: 15px;
+      padding-left: 20px;
     }
-
-    .chat-message.file a:hover {
-      text-decoration: underline;
+    .key-points li {
+      margin-bottom: 5px;
     }
-
-    /* Responsive Adjustments */
-    @media (max-width: 600px) {
-      .chat-container {
-        max-width: 100%;
-        height: 100%;
-        border-radius: 0;
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
       }
-
-      .chat-input input[type="text"] {
-        margin-right: 5px;
-        padding: 10px;
-      }
-
-      .upload-button {
-        padding: 8px;
-        font-size: 16px;
-        margin-right: 5px;
-      }
-
-      .chat-input button {
-        width: 40px;
-        height: 40px;
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #444;
       }
     }
   </style>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VFM5YQDYN7"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VFM5YQDYN7');
-  </script>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="chat-log" id="chatLog">
-      <!-- Default assistant greeting -->
-      <div class="chat-message bot">
-        I am LightAI, your assistant. How can I help you today?
+  <div class="page-container">
+    <div class="header">LightAi v5</div>
+    <div class="main-content">
+      <div class="sidebar">
+        This is a model under development made by Shreyan && Co
       </div>
-    </div>
-    <div class="chat-input">
-      <div class="input-row">
-        <input type="text" id="chatInput" placeholder="Type your message..." />
-        <label for="fileInput" class="upload-button" title="Upload File">📎</label>
-        <button id="sendButton"></button>
+      <div class="chat-container">
+        <div class="chat-log" id="chatLog">
+          <div class="chat-message bot">
+            I am LightAI, your assistant. How can I help you today?
+          </div>
+        </div>
+        <div class="chat-input-container">
+          <input type="text" id="chatInput" placeholder="Type your message..." />
+          <button class="upload-btn" id="uploadButton"></button>
+          <button class="send-btn" id="sendButton"></button>
+          <!-- Hidden file input -->
+          <input type="file" id="fileInput" style="display: none;" />
+        </div>
       </div>
-      <input type="file" id="fileInput" accept=".txt" />
-      <div id="selectedFile" class="file-name"></div>
     </div>
   </div>
 
@@ -276,17 +200,8 @@
     const chatLog = document.getElementById('chatLog');
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
+    const uploadButton = document.getElementById('uploadButton');
     const fileInput = document.getElementById('fileInput');
-    const selectedFileDiv = document.getElementById('selectedFile');
-
-    // Display selected file name
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files.length > 0) {
-        selectedFileDiv.textContent = `Selected file: ${fileInput.files[0].name}`;
-      } else {
-        selectedFileDiv.textContent = '';
-      }
-    });
 
     function addMessage(message, userType) {
       const messageDiv = document.createElement('div');
@@ -296,43 +211,13 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    function addFileMessage(fileName) {
-      const messageDiv = document.createElement('div');
-      messageDiv.classList.add('chat-message', 'file');
-      // You can customize the link's href as needed, for example, to download the file
-      messageDiv.innerHTML = `<strong>Uploaded File:</strong> <a href="#" onclick="alert('File uploaded: ${fileName}')">${fileName}</a>`;
-      chatLog.appendChild(messageDiv);
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
     async function sendMessage() {
       const userMessage = chatInput.value.trim();
-      const file = fileInput.files[0];
+      if (!userMessage) return;
 
-      if (!userMessage && !file) return; // Prevent sending empty messages
-
-      // Create FormData
-      const formData = new FormData();
-      formData.append('message', userMessage);
-      if (file) {
-        formData.append('file', file);
-      }
-
-      // Add user message to chat log
-      if (userMessage) {
-        addMessage(userMessage, 'user');
-      }
-
-      if (file) {
-        // Display the file in the chat log
-        addFileMessage(file.name);
-      }
-
+      addMessage(userMessage, 'user');
       chatInput.value = '';
-      fileInput.value = '';
-      selectedFileDiv.textContent = '';
 
-      // Add loading animation
       const loadingDiv = document.createElement('div');
       loadingDiv.classList.add('loading');
       loadingDiv.innerHTML = '<span>.</span><span>.</span><span>.</span>';
@@ -342,24 +227,63 @@
       try {
         const response = await fetch('/chat', {
           method: 'POST',
-          body: formData
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: userMessage })
         });
-
         const data = await response.json();
         chatLog.removeChild(loadingDiv);
-
-        if (data.response) {
-          // Format response into sections
-          const formattedResponse = formatResponse(data.response);
-          addMessage(formattedResponse, 'bot');
-        } else if (data.error) {
-          addMessage('Sorry, there was an error processing your request.', 'bot');
-        }
+        const formattedResponse = formatResponse(data.response);
+        addMessage(formattedResponse, 'bot');
       } catch (error) {
         chatLog.removeChild(loadingDiv);
         addMessage('Sorry, there was an error processing your request.', 'bot');
       }
     }
+
+    async function uploadFile(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const loadingDiv = document.createElement('div');
+      loadingDiv.classList.add('loading');
+      loadingDiv.innerHTML = '<span>.</span><span>.</span><span>.</span>';
+      chatLog.appendChild(loadingDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        chatLog.removeChild(loadingDiv);
+        if (data.response) {
+          const formattedResponse = formatResponse(data.response);
+          addMessage(formattedResponse, 'bot');
+        } else if (data.error) {
+          addMessage(data.error, 'bot');
+        }
+      } catch (error) {
+        chatLog.removeChild(loadingDiv);
+        addMessage('Sorry, there was an error uploading your file.', 'bot');
+      }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    uploadButton.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) {
+        uploadFile(file);
+      }
+    });
 
     function formatResponse(response) {
       const sections = response.split('\n');
@@ -373,11 +297,6 @@
         }
       }).join('');
     }
-
-    sendButton.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
   </script>
 </body>
 </html>
