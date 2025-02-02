@@ -110,6 +110,10 @@ def upload():
         if file.content_type.startswith('image/'):
             image_bytes = file.read()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+            # Check if the encoded image is too long for processing
+            MAX_BASE64_LENGTH = 5000  # Adjust this threshold as needed
+            if len(encoded_image) > MAX_BASE64_LENGTH:
+                return jsonify({"error": "Image too large for analysis. Please upload a smaller image."}), 400
             text = f"Please analyze the following image encoded in base64: {encoded_image}"
         else:
             content = file.read()
