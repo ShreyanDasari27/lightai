@@ -6,9 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LightAi v5</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -134,15 +132,9 @@
       font-size: 20px;
       animation: wave 1.5s infinite;
     }
-    .loading span:nth-child(1) {
-      animation-delay: 0s;
-    }
-    .loading span:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-    .loading span:nth-child(3) {
-      animation-delay: 0.4s;
-    }
+    .loading span:nth-child(1) { animation-delay: 0s; }
+    .loading span:nth-child(2) { animation-delay: 0.2s; }
+    .loading span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes wave {
       0%, 100% { opacity: 0.2; }
       50% { opacity: 1; }
@@ -161,9 +153,7 @@
     }
     /* Responsive adjustments */
     @media (max-width: 768px) {
-      .main-content {
-        flex-direction: column;
-      }
+      .main-content { flex-direction: column; }
       .sidebar {
         width: 100%;
         border-right: none;
@@ -211,6 +201,18 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
+    function addImageMessage(dataUrl) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('chat-message', 'user');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.maxWidth = '100%';
+      img.style.borderRadius = '8px';
+      messageDiv.appendChild(img);
+      chatLog.appendChild(messageDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
     async function sendMessage() {
       const userMessage = chatInput.value.trim();
       if (!userMessage) return;
@@ -241,6 +243,18 @@
     }
 
     async function uploadFile(file) {
+      // If the file is an image, display a preview in the chat log.
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          addImageMessage(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For non-image files, display a simple text message.
+        addMessage(`<em>File "${file.name}" uploaded.</em>`, 'user');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 

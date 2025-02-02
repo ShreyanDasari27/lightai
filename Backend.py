@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 import json
 import os
+import base64  # Built-in module for encoding image data
 
 # Configure the API key from environment variables
 API_KEY = os.getenv("API_KEY")
@@ -24,7 +25,10 @@ class LightAIChat:
         ai_response = self.chat.send_message(message)
         # Replace mentions of "Gemini" with "LightAI"
         cleaned_response = ai_response.text.replace("Gemini", "LightAI")
-        if any(keyword in ai_response.text.lower() for keyword in ["developed", "made you", "created you", "who created you", "did google create you", "trained you", "trained", "trained by", "made by"]):
+        if any(keyword in ai_response.text.lower() for keyword in [
+            "developed", "made you", "created you", "who created you",
+            "did google create you", "trained you", "trained", "trained by", "made by"
+        ]):
             cleaned_response = cleaned_response.replace("Google", "LightAI")
         return cleaned_response
 
@@ -91,12 +95,19 @@ def upload():
         file = request.files['file']
         if file.filename == '':
             return jsonify({"error": "No selected file."}), 400
-        content = file.read()
-        try:
-            # Attempt to decode file as UTF-8 text
-            text = content.decode('utf-8')
-        except UnicodeDecodeError:
-            text = "Binary file received. Unable to process file content."
+
+        # Process image files by encoding them in base64 and prompting analysis
+        if file.content_type.startswith('image/'):
+            image_bytes = file.read()
+            encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+            text = f"Please analyze the following image encoded in base64: {encoded_image}"
+        else:
+            content = file.read()
+            try:
+                text = content.decode('utf-8')
+            except UnicodeDecodeError:
+                text = f"File '{file.filename}' received, but it appears to be a binary file."
+
         response = handle_user_input(text)
         chat_history.add_message("User (file)", text)
         chat_history.add_message("LightAI", response)
