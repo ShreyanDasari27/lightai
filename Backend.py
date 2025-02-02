@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 import json
 import os
-import base64  # Built-in module for encoding image data
+import base64
 
 # Configure the API key from environment variables
 API_KEY = os.getenv("API_KEY")
@@ -15,6 +15,8 @@ ai.configure(api_key=API_KEY)
 logging.basicConfig(filename='lightai_chat.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 
 app = Flask(__name__, static_folder='.', static_url_path='')
+# Limit upload size to 16MB
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 class LightAIChat:
     def __init__(self, model_name="gemini-pro"):
@@ -22,7 +24,11 @@ class LightAIChat:
         self.chat = self.model.start_chat()
 
     def send_message(self, message):
-        ai_response = self.chat.send_message(message)
+        try:
+            ai_response = self.chat.send_message(message)
+        except Exception as e:
+            logging.error(f"Error from generative model: {e}")
+            return "Sorry, I couldn't process the request due to an internal error."
         # Replace mentions of "Gemini" with "LightAI"
         cleaned_response = ai_response.text.replace("Gemini", "LightAI")
         if any(keyword in ai_response.text.lower() for keyword in [
@@ -37,7 +43,11 @@ class ChatHistory:
         self.history = []
 
     def add_message(self, user, message):
-        self.history.append({"user": user, "message": message, "timestamp": datetime.now().isoformat()})
+        self.history.append({
+            "user": user,
+            "message": message,
+            "timestamp": datetime.now().isoformat()
+        })
 
     def save_to_file(self, filename="chat_history.json"):
         with open(filename, "w") as file:
@@ -84,7 +94,7 @@ def chat():
         chat_history.add_message("LightAI", response)
         return jsonify({"response": response})
     except Exception as e:
-        logging.error(f"Error handling request: {e}")
+        logging.error(f"Error handling /chat request: {e}")
         return jsonify({"error": "An error occurred processing your request."}), 500
 
 @app.route('/upload', methods=['POST'])
@@ -96,7 +106,7 @@ def upload():
         if file.filename == '':
             return jsonify({"error": "No selected file."}), 400
 
-        # Process image files by encoding them in base64 and prompting analysis
+        # Process image files: encode in base64 and include in a prompt for analysis
         if file.content_type.startswith('image/'):
             image_bytes = file.read()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
@@ -113,7 +123,7 @@ def upload():
         chat_history.add_message("LightAI", response)
         return jsonify({"response": response})
     except Exception as e:
-        logging.error(f"Error processing file upload: {e}")
+        logging.error(f"Error processing /upload request: {e}")
         return jsonify({"error": "Error processing file upload."}), 500
 
 @app.route('/')
