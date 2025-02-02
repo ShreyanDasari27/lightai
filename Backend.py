@@ -57,7 +57,7 @@ class ChatHistory:
 lightai_chat = LightAIChat()
 chat_history = ChatHistory()
 
-# Define the knowledge base
+# Define the knowledge base for simple queries
 knowledge_base = {
     "who are you": "I am LightAI, your AI assistant here to help you!",
     "what is your purpose": "My purpose is to assist and provide information to you.",
@@ -106,15 +106,19 @@ def upload():
         if file.filename == '':
             return jsonify({"error": "No selected file."}), 400
 
-        # Process image files: encode in base64 and include in a prompt for analysis
+        # Process image files: encode in base64 and use an improved prompt for analysis
         if file.content_type.startswith('image/'):
             image_bytes = file.read()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
-            # Check if the encoded image is too long for processing
-            MAX_BASE64_LENGTH = 50000  # Adjust this threshold as needed
+            MAX_BASE64_LENGTH = 5000  # Adjust threshold as needed
             if len(encoded_image) > MAX_BASE64_LENGTH:
                 return jsonify({"error": "Image too large for analysis. Please upload a smaller image."}), 400
-            text = f"Please analyze the following image encoded in base64: {encoded_image}"
+
+            text = ("The following is a base64 encoded image. "
+                    "Please provide a detailed analysis of its visual content, "
+                    "focusing on the main subjects, objects, colors, and overall setting. "
+                    "Ignore the encoded data itself. "
+                    "Image data: " + encoded_image)
         else:
             content = file.read()
             try:
