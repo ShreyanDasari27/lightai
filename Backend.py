@@ -6,6 +6,8 @@ from datetime import datetime
 import json
 import os
 import base64
+import io
+from PIL import Image  # New import for image processing
 
 # Configure the API key from environment variables
 API_KEY = os.getenv("API_KEY")
@@ -106,9 +108,24 @@ def upload():
         if file.filename == '':
             return jsonify({"error": "No selected file."}), 400
 
-        # Process image files: encode in base64 and include in a prompt for analysis
+        # Process image files with Pillow
         if file.content_type.startswith('image/'):
             image_bytes = file.read()
+            # Open image using Pillow
+            image = Image.open(io.BytesIO(image_bytes))
+            # Optionally resize the image if its width exceeds a maximum value
+            max_width = 800
+            if image.width > max_width:
+                ratio = max_width / image.width
+                new_size = (max_width, int(image.height * ratio))
+                image = image.resize(new_size, Image.ANTIALIAS)
+                # Save resized image to bytes
+                buf = io.BytesIO()
+                # Use the original format if available, otherwise default to PNG
+                image_format = image.format if image.format else "PNG"
+                image.save(buf, format=image_format)
+                image_bytes = buf.getvalue()
+            # Encode the (processed) image in base64.
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
             text = f"Please analyze the following image encoded in base64: {encoded_image}"
         else:
@@ -117,7 +134,7 @@ def upload():
                 text = content.decode('utf-8')
             except UnicodeDecodeError:
                 text = f"File '{file.filename}' received, but it appears to be a binary file."
-
+        
         response = handle_user_input(text)
         chat_history.add_message("User (file)", text)
         chat_history.add_message("LightAI", response)
