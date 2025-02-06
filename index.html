@@ -160,7 +160,7 @@
     .key-points li {
       margin-bottom: 5px;
     }
-    /* Code block styling */
+    /* Code block styling with VSCode-like theme */
     .code-block-container {
       background-color: #1e1e1e;
       border: 1px solid #333;
@@ -168,7 +168,7 @@
       margin: 10px auto;
       max-width: 80%;
       overflow: hidden;
-      font-family: monospace;
+      font-family: Consolas, "Courier New", monospace;
       text-align: left;
       position: relative;
     }
@@ -187,14 +187,20 @@
       padding: 2px 6px;
       border-radius: 4px;
       cursor: pointer;
+      font-size: 12px;
     }
     .code-content {
       background-color: #1e1e1e;
+      color: #d4d4d4;
       padding: 10px;
       overflow-x: auto;
       white-space: pre-wrap;
-      color: #a6e22e; /* example code color */
+      min-height: 50px;
     }
+    /* Basic syntax highlighting rules */
+    .keyword { color: #569cd6; }
+    .string { color: #ce9178; }
+    .comment { color: #6a9955; }
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .main-content { flex-direction: column; }
@@ -237,7 +243,7 @@
     const uploadButton = document.getElementById('uploadButton');
     const fileInput = document.getElementById('fileInput');
 
-    // Regular message insertion for user messages (no animation)
+    // Standard message insertion for user messages (no animation)
     function addMessage(message, userType) {
       const messageDiv = document.createElement('div');
       messageDiv.classList.add('chat-message', userType);
@@ -246,8 +252,8 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Animate text letter-by-letter. For non-code messages, after completion,
-    // replace the plain text with formatted HTML (bold, indented sections, etc.)
+    // Animate text letter-by-letter.
+    // For code blocks, once complete, apply syntax highlighting.
     function animateTyping(element, text, isCode, callback) {
       element.textContent = "";
       let i = 0;
@@ -258,8 +264,9 @@
         chatLog.scrollTop = chatLog.scrollHeight;
         if (i >= text.length) {
           clearInterval(interval);
-          if (!isCode) {
-            // Replace with formatted HTML after animation for normal text
+          if (isCode) {
+            element.innerHTML = syntaxHighlight(element.textContent);
+          } else {
             element.innerHTML = formatResponse(text);
           }
           if (callback) callback();
@@ -267,8 +274,7 @@
       }, typingSpeed);
     }
 
-    // Animate bot message. If the message includes code blocks (using ```),
-    // split it into segments and animate each accordingly.
+    // Animate bot message, splitting code blocks (delineated by ```)
     function animateBotMessage(message) {
       const messageDiv = document.createElement('div');
       messageDiv.classList.add('chat-message', 'bot');
@@ -289,7 +295,7 @@
                 animateNextSegment();
               });
             } else {
-              // Create a special code block container
+              // Create code block container
               const codeContainer = document.createElement('div');
               codeContainer.classList.add('code-block-container');
 
@@ -300,7 +306,6 @@
               const copyButton = document.createElement('button');
               copyButton.classList.add('copy-button');
               copyButton.innerText = 'Copy';
-              // When clicked, copy the code content to the clipboard
               copyButton.addEventListener('click', function() {
                 navigator.clipboard.writeText(codeContent.textContent);
               });
@@ -325,19 +330,14 @@
       }
     }
 
-    // Formatting function to convert simple markdown-like syntax:
-    // *text* becomes bold, ### headers and indented blocks for sections,
-    // and - bullet lists.
+    // Basic formatting: converts *text* to bold, handles section headers and bullet lists.
     function formatResponse(response) {
       const lines = response.split('\n');
       let html = "";
       let inIndentBlock = false;
-
       lines.forEach(line => {
         line = line.trim();
-        // Convert *text* to bold
         line = line.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
-        
         if (line.startsWith("###")) {
           if (inIndentBlock) {
             html += "</div>";
@@ -362,11 +362,24 @@
       return html;
     }
 
+    // A simple syntax highlighter for code, using regex replacements.
+    function syntaxHighlight(code) {
+      // Escape HTML entities
+      code = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      // Highlight single-line comments
+      code = code.replace(/(\/\/.*?$)/gm, '<span class="comment">$1</span>');
+      // Highlight strings (both single and double quotes)
+      code = code.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="string">$&</span>');
+      // Highlight common keywords (adjust as needed)
+      const keywords = ["function", "const", "let", "var", "if", "else", "return", "import", "from", "class", "new", "for", "while", "switch", "case", "break", "async", "await"];
+      const keywordRegex = new RegExp('\\b(' + keywords.join('|') + ')\\b', 'g');
+      code = code.replace(keywordRegex, '<span class="keyword">$1</span>');
+      return code;
+    }
+
     async function sendMessage() {
       const userMessage = chatInput.value.trim();
       if (!userMessage) return;
-
-      // Display user message instantly
       addMessage(userMessage, 'user');
       chatInput.value = '';
 
@@ -384,7 +397,6 @@
         });
         const data = await response.json();
         chatLog.removeChild(loadingDiv);
-        // Use the animated bot message function
         animateBotMessage(data.response);
       } catch (error) {
         chatLog.removeChild(loadingDiv);
@@ -402,16 +414,13 @@
       } else {
         addMessage(`<em>File "${file.name}" uploaded.</em>`, 'user');
       }
-
       const formData = new FormData();
       formData.append('file', file);
-
       const loadingDiv = document.createElement('div');
       loadingDiv.classList.add('loading');
       loadingDiv.innerHTML = '<span>.</span><span>.</span><span>.</span>';
       chatLog.appendChild(loadingDiv);
       chatLog.scrollTop = chatLog.scrollHeight;
-
       try {
         const response = await fetch('/upload', {
           method: 'POST',
@@ -431,20 +440,9 @@
     }
 
     sendButton.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    uploadButton.addEventListener('click', () => {
-      fileInput.click();
-    });
-
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (file) {
-        uploadFile(file);
-      }
-    });
+    chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    uploadButton.addEventListener('click', () => { fileInput.click(); });
+    fileInput.addEventListener('change', () => { const file = fileInput.files[0]; if (file) { uploadFile(file); } });
   </script>
 </body>
 </html>
