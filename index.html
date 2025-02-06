@@ -124,6 +124,22 @@
       font-size: 1rem;
     }
     .chat-input-container input[type="text"]::placeholder { color: #aaa; }
+    /* Upload file button styling */
+    .upload-btn {
+      border: none;
+      background: #1C1A1C;
+      color: #AAAAAA;
+      padding: 1em 1.5em;
+      border-radius: 1em;
+      cursor: pointer;
+      transition: all 450ms ease-in-out;
+      font-weight: 600;
+    }
+    .upload-btn:hover {
+      background: linear-gradient(0deg, #A47CF3, #683FEA);
+      transform: translateY(-2px);
+      color: white;
+    }
     /* Generate button using provided styles */
     .btn {
       border: none;
@@ -317,7 +333,7 @@
         border-right: none;
         border-bottom: 1px solid #444;
       }
-      .btn {
+      .btn, .upload-btn {
         width: 100%;
       }
       .chat-input-container {
@@ -364,7 +380,7 @@
             <p>/* End of dummy content section */</p>
           </div>
         </div>
-        <!-- Input Area with Generate Button -->
+        <!-- Input Area with Generate & Upload Buttons -->
         <div class="chat-input-container">
           <input type="text" id="chatInput" placeholder="Type your message..." />
           <!-- Generate Button -->
@@ -374,6 +390,10 @@
             </svg>
             <span class="text">Generate</span>
           </button>
+          <!-- Upload Button -->
+          <button class="upload-btn" id="uploadButton">Upload File</button>
+          <!-- Hidden file input -->
+          <input type="file" id="fileInput" style="display:none;" />
         </div>
       </div>
     </div>
@@ -400,6 +420,8 @@
     var chatLog = document.getElementById('chatLog');
     var chatInput = document.getElementById('chatInput');
     var sendButton = document.getElementById('sendButton');
+    var uploadButton = document.getElementById('uploadButton');
+    var fileInput = document.getElementById('fileInput');
     var modalOverlay = document.getElementById('modalOverlay');
     var modalClose = document.getElementById('modalClose');
     
@@ -559,6 +581,27 @@
     // Event listeners.
     sendButton.addEventListener('click', sendMessage);
     chatInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') sendMessage(); });
+    uploadButton.addEventListener('click', function() { fileInput.click(); });
+    fileInput.addEventListener('change', function() {
+      var file = fileInput.files[0];
+      if (file) {
+        // Create a FormData object to send file data.
+        var formData = new FormData();
+        formData.append('file', file);
+        
+        var loadingIndicator = showLoadingIndicator();
+        fetch('/upload', { method: 'POST', body: formData })
+          .then(function(response) { return response.json(); })
+          .then(function(data) {
+            chatLog.removeChild(loadingIndicator);
+            animateBotMessage(data.response);
+          })
+          .catch(function(error) {
+            chatLog.removeChild(loadingIndicator);
+            addMessage('Sorry, there was an error uploading your file.', 'bot');
+          });
+      }
+    });
     
     // Modal dialog controls.
     var modalOverlay = document.getElementById('modalOverlay');
