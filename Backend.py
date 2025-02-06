@@ -7,11 +7,15 @@ import json
 import os
 import base64
 import io
-from PIL import Image  # New import for image processing
+from PIL import Image  # For image processing
+import requests       # For external API calls
 
-# Configure the API key from environment variables
+# Configure the API key for generative AI from environment variables
 API_KEY = os.getenv("API_KEY")
 ai.configure(api_key=API_KEY)
+
+# Configure DeepAI API key (free alternative for image tagging)
+DEEPAI_API_KEY = os.getenv("DEEPAI_API_KEY")
 
 # Set up logging
 logging.basicConfig(filename='lightai_chat.log', level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -59,7 +63,7 @@ class ChatHistory:
 lightai_chat = LightAIChat()
 chat_history = ChatHistory()
 
-# Define the knowledge base
+# Define a simple knowledge base for common queries.
 knowledge_base = {
     "who are you": "I am LightAI, your AI assistant here to help you!",
     "what is your purpose": "My purpose is to assist and provide information to you.",
@@ -69,7 +73,6 @@ knowledge_base = {
     "who are your creators": "I am LightAI, a multi-modal model, brought to life by Shreyan Dasari."
 }
 
-# Fuzzy matching threshold
 FUZZY_MATCH_THRESHOLD = 80
 
 def get_fuzzy_match(user_input, knowledge_base):
@@ -85,6 +88,27 @@ def handle_user_input(user_input):
     else:
         response = lightai_chat.send_message(user_input)
     return response
+
+def process_image_with_deepai(image_bytes):
+    """
+    Uses DeepAI's Image Tagging API to get tags for the image.
+    Returns a description string or None if unsuccessful.
+    """
+    try:
+        url = "https://api.deepai.org/api/image-tagging"
+        headers = {'api-key': DEEPAI_API_KEY}
+        files = {'image': image_bytes}
+        r = requests.post(url, files=files, headers=headers)
+        result = r.json()
+        if 'output' in result and 'tags' in result['output']:
+            tags = result['output']['tags']
+            top_tags = [tag['tag'] for tag in tags if float(tag.get('confidence', 0)) > 0.5][:5]
+            if top_tags:
+                return "Image contains: " + ", ".join(top_tags) + "."
+        return None
+    except Exception as e:
+        logging.error(f"Error calling DeepAI API: {e}")
+        return None
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -108,33 +132,36 @@ def upload():
         if file.filename == '':
             return jsonify({"error": "No selected file."}), 400
 
-        # Process image files with Pillow
         if file.content_type.startswith('image/'):
             image_bytes = file.read()
-            # Open image using Pillow
             image = Image.open(io.BytesIO(image_bytes))
-            # Optionally resize the image if its width exceeds a maximum value
+            # Resize if image width exceeds 800 pixels.
             max_width = 800
             if image.width > max_width:
                 ratio = max_width / image.width
                 new_size = (max_width, int(image.height * ratio))
                 image = image.resize(new_size, Image.ANTIALIAS)
-                # Save resized image to bytes
                 buf = io.BytesIO()
-                # Use the original format if available, otherwise default to PNG
                 image_format = image.format if image.format else "PNG"
                 image.save(buf, format=image_format)
                 image_bytes = buf.getvalue()
-            # Encode the (processed) image in base64.
-            encoded_image = base64.b64encode(image_bytes).decode('utf-8')
-            text = f"Please analyze the following image encoded in base64: {encoded_image}"
+            # Try using DeepAI API for a description.
+            deepai_description = process_image_with_deepai(image_bytes)
+            if deepai_description:
+                text = deepai_description
+            else:
+                # Fallback: use base64-encoded image in a refined prompt.
+                encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+                text = (f"The following is an image encoded in base64. "
+                        f"Please provide a detailed and accurate description of its content:\n\n"
+                        f"{encoded_image}")
         else:
             content = file.read()
             try:
                 text = content.decode('utf-8')
             except UnicodeDecodeError:
                 text = f"File '{file.filename}' received, but it appears to be a binary file."
-        
+
         response = handle_user_input(text)
         chat_history.add_message("User (file)", text)
         chat_history.add_message("LightAI", response)
