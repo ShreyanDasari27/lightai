@@ -5,17 +5,19 @@
   <!-- Ensure proper scaling on mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LightAi v5</title>
+  <!-- Import Google Font Roboto -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
   <!-- PrismJS for syntax highlighting (using VSCode Tomorrow theme) -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <!-- MarkedJS for Markdown parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
   <style>
-    /* Base styles and minimalistic design */
+    /* Base and minimalistic styles */
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
+      font-family: 'Roboto', sans-serif;
       background-color: #1e1e1e;
       color: #e8e8e8;
     }
@@ -62,14 +64,13 @@
       flex-direction: column;
       gap: 20px;
     }
-    /* Centered message bubbles */
+    /* Message bubble styling – container is centered; text inside may be left for bot messages */
     .chat-message {
       background-color: #3c3c3c;
       padding: 15px;
       border-radius: 10px;
       max-width: 80%;
       margin: 10px auto;
-      text-align: center;
       word-wrap: break-word;
     }
     .chat-message.user {
@@ -80,89 +81,51 @@
     .chat-message.bot {
       background-color: #2d2d2d;
       color: #e8e8e8;
-      text-align: center;
+      text-align: left;
     }
+    /* Chat input container improvements */
     .chat-input-container {
       display: flex;
-      padding: 10px;
+      padding: 15px;
       background-color: #2b2b2b;
       border-top: 1px solid #444;
       align-items: center;
+      gap: 10px;
     }
     .chat-input-container input[type="text"] {
       flex: 1;
       padding: 15px;
       border: none;
       border-radius: 8px;
-      margin-right: 10px;
       background-color: #444;
       color: white;
+      font-size: 16px;
     }
+    .chat-input-container input[type="text"]::placeholder {
+      color: #aaa;
+    }
+    /* Remove old send/upload button styles (they will be replaced by our new button) */
     .chat-input-container button {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background-color: white;
       border: none;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      background: none;
       cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      margin-right: 10px;
     }
-    .chat-input-container button:hover {
-      background-color: #e8e8e8;
-    }
-    .chat-input-container button:focus {
-      outline: none;
-    }
-    /* Button icons */
-    .chat-input-container button.send-btn::after {
-      content: "→";
-      font-size: 20px;
-      color: black;
-    }
-    .chat-input-container button.upload-btn::after {
-      content: "📎";
-      font-size: 20px;
-      color: black;
-    }
-    /* Loading dots animation and thinking text */
-    .loading-dots span {
-      display: inline-block;
-      margin: 0 3px;
-      font-size: 20px;
-      animation: wave 1.5s infinite;
-    }
-    @keyframes wave {
-      0%, 60%, 100% { transform: translateY(0); }
-      30% { transform: translateY(-10px); }
-    }
-    /* Markdown styling for explanations */
-    .section-title {
-      font-size: 24px;
-      font-weight: bold;
-      color: #ffffff;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    .indented { margin-left: 20px; text-align: left; }
-    .key-points {
-      list-style-type: disc;
-      padding-left: 20px;
-      text-align: left;
-    }
-    /* Code block styling (ChatGPT/VSCode style) */
+    /* Code block styling – ensure left alignment and proper expansion */
     .code-block-container {
       background-color: #1e1e1e;
       border: 1px solid #333;
       border-radius: 8px;
       margin: 10px auto;
       max-width: 80%;
-      overflow: hidden;
+      overflow: auto;
       font-family: Consolas, "Courier New", monospace;
       position: relative;
+      text-align: left !important;
+    }
+    .code-block-container pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
     .code-block-header {
       background-color: #2d2d2d;
@@ -186,15 +149,101 @@
       padding: 10px;
       overflow-x: auto;
       white-space: pre-wrap;
-      min-height: 50px;
     }
-    /* Minimalistic fade-in (used only once at final placement) */
+    /* Fade-in for new messages */
     .fade-in {
       animation: fadeIn 0.3s forwards;
       opacity: 0;
     }
     @keyframes fadeIn {
       to { opacity: 1; }
+    }
+    /* Loader animation (based on your provided CSS, with color adjusted) */
+    .loader {
+      position: relative;
+      width: 120px;
+      height: 90px;
+      margin: 0 auto;
+    }
+    .loader:before {
+      content: "";
+      position: absolute;
+      bottom: 30px;
+      left: 50px;
+      height: 30px;
+      width: 30px;
+      border-radius: 50%;
+      background: #569cd6; /* Changed from green to blue */
+      animation: loading-bounce 0.5s ease-in-out infinite alternate;
+    }
+    .loader:after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 7px;
+      width: 45px;
+      border-radius: 4px;
+      box-shadow: 0 5px 0 #f2f2f2, -35px 50px 0 #f2f2f2, -70px 95px 0 #f2f2f2;
+      animation: loading-step 1s ease-in-out infinite;
+    }
+    @keyframes loading-bounce {
+      0% { transform: scale(1, 0.7); }
+      40% { transform: scale(0.8, 1.2); }
+      60% { transform: scale(1, 1); }
+      100% { bottom: 140px; }
+    }
+    @keyframes loading-step {
+      0% {
+        box-shadow: 0 10px 0 rgba(0, 0, 0, 0),
+                    0 10px 0 #f2f2f2,
+                    -35px 50px 0 #f2f2f2,
+                    -70px 90px 0 #f2f2f2;
+      }
+      100% {
+        box-shadow: 0 10px 0 #f2f2f2,
+                    -35px 50px 0 #f2f2f2,
+                    -70px 90px 0 #f2f2f2,
+                    -70px 90px 0 rgba(0, 0, 0, 0);
+      }
+    }
+    /* New Generate button using provided styles */
+    .btn {
+      border: none;
+      width: 15em;
+      height: 5em;
+      border-radius: 3em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      background: #1C1A1C;
+      cursor: pointer;
+      transition: all 450ms ease-in-out;
+    }
+    .sparkle {
+      fill: #AAAAAA;
+      transition: all 800ms ease;
+    }
+    .text {
+      font-weight: 600;
+      color: #AAAAAA;
+      font-size: medium;
+    }
+    .btn:hover {
+      background: linear-gradient(0deg,#A47CF3,#683FEA);
+      box-shadow: inset 0px 1px 0px 0px rgba(255,255,255,0.4),
+                  inset 0px -4px 0px 0px rgba(0,0,0,0.2),
+                  0px 0px 0px 4px rgba(255,255,255,0.2),
+                  0px 0px 180px 0px #9917FF;
+      transform: translateY(-2px);
+    }
+    .btn:hover .text {
+      color: white;
+    }
+    .btn:hover .sparkle {
+      fill: white;
+      transform: scale(1.2);
     }
     /* Responsive adjustments */
     @media (max-width: 768px) {
@@ -203,6 +252,16 @@
         width: 100%;
         border-right: none;
         border-bottom: 1px solid #444;
+      }
+      .btn {
+        width: 100%;
+      }
+      .chat-input-container {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .chat-input-container input[type="text"] {
+        width: 100%;
       }
     }
   </style>
@@ -222,8 +281,16 @@
         </div>
         <div class="chat-input-container">
           <input type="text" id="chatInput" placeholder="Type your message..." />
-          <button class="upload-btn" id="uploadButton"></button>
-          <button class="send-btn" id="sendButton"></button>
+          <!-- New Generate button -->
+          <button class="btn" id="sendButton">
+            <svg class="sparkle" width="24" height="24" viewBox="0 0 24 24">
+              <path d="M12 2l2.9 7H22l-5.9 4.3L17.8 22 12 17.7 6.2 22l1.7-8.7L2 9h7.1L12 2z"/>
+            </svg>
+            <span class="text">Generate</span>
+          </button>
+          <button class="upload-btn" id="uploadButton">
+            📎
+          </button>
           <!-- Hidden file input -->
           <input type="file" id="fileInput" style="display: none;" />
         </div>
@@ -232,35 +299,68 @@
   </div>
 
   <script>
+    // Global flag for cancelling animations.
+    let stopRequested = false;
+    // Reference to any active interval.
+    let currentInterval = null;
+
     const chatLog = document.getElementById('chatLog');
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
     const uploadButton = document.getElementById('uploadButton');
     const fileInput = document.getElementById('fileInput');
 
-    // Animate letter-by-letter; for code, update innerHTML with live syntax highlighting.
+    // Append a simple message (for user messages)
+    function addMessage(message, userType) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('chat-message', userType, 'fade-in');
+      messageDiv.innerHTML = message;
+      chatLog.appendChild(messageDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Immediately finish any ongoing animation.
+    function finishCurrentAnimation(element, plainText, isCode, callback) {
+      if (currentInterval) {
+        clearInterval(currentInterval);
+        currentInterval = null;
+      }
+      if (isCode) {
+        element.textContent = plainText;
+        Prism.highlightElement(element);
+      } else {
+        element.innerHTML = marked.parse(plainText);
+      }
+      if (callback) callback();
+    }
+
+    // Animate letter-by-letter typing. Checks for stopRequested.
     function animateTyping(element, text, isCode, callback) {
       let i = 0;
-      const typingSpeed = 30;
+      const typingSpeed = 30; // ms per character
       const plainText = text;
-      const interval = setInterval(() => {
+      currentInterval = setInterval(() => {
+        if (stopRequested) {
+          finishCurrentAnimation(element, plainText, isCode, callback);
+          stopRequested = false;
+          clearInterval(currentInterval);
+          currentInterval = null;
+          return;
+        }
         i++;
         if (isCode) {
-          // For code, update using our syntax highlighter on the current substring.
-          element.innerHTML = syntaxHighlight(plainText.substring(0, i));
+          element.textContent = plainText.substring(0, i);
         } else {
           element.textContent = plainText.substring(0, i);
         }
         chatLog.scrollTop = chatLog.scrollHeight;
         if (i >= plainText.length) {
-          clearInterval(interval);
+          clearInterval(currentInterval);
+          currentInterval = null;
           if (!isCode) {
-            // Once finished, parse Markdown for formatted text.
             element.innerHTML = marked.parse(plainText);
           } else {
-            // For code, ensure final highlighting.
-            element.innerHTML = syntaxHighlight(plainText);
-            // Also run Prism to catch any missed highlights.
+            element.textContent = plainText;
             Prism.highlightElement(element);
           }
           if (callback) callback();
@@ -268,57 +368,45 @@
       }, typingSpeed);
     }
 
-    // A simple syntax highlighter using regex for live updates.
-    // (This applies basic highlighting; Prism.js finalizes the styling.)
-    function syntaxHighlight(code) {
-      // Escape HTML entities.
-      code = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      // Highlight single-line comments.
-      code = code.replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955;">$1</span>');
-      // Highlight strings.
-      code = code.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span style="color:#ce9178;">$&</span>');
-      // Highlight common keywords.
-      const keywords = ["function", "const", "let", "var", "if", "else", "return", "import", "from", "class", "new", "for", "while", "switch", "case", "break", "async", "await"];
-      const keywordRegex = new RegExp('\\b(' + keywords.join('|') + ')\\b', 'g');
-      code = code.replace(keywordRegex, '<span style="color:#569cd6;">$1</span>');
-      return code;
-    }
-
-    // Display a "Thinking..." indicator with animated loading dots.
+    // Show a "Thinking..." indicator with the new loader animation and a Stop button.
     function showLoadingIndicator() {
       const loadingContainer = document.createElement('div');
       loadingContainer.classList.add('chat-message', 'bot');
       
-      // Create a container for the "Thinking..." text.
+      // "Thinking..." text above the loader.
       const thinkingText = document.createElement('div');
-      thinkingText.classList.add('thinking-text');
+      thinkingText.textContent = "Thinking...";
+      thinkingText.style.textAlign = "center";
+      thinkingText.style.marginBottom = "10px";
       loadingContainer.appendChild(thinkingText);
       
-      // Create container for loading dots.
-      const dotsContainer = document.createElement('div');
-      dotsContainer.classList.add('loading-dots');
-      for (let i = 0; i < 3; i++) {
-        const dot = document.createElement('span');
-        dot.textContent = '.';
-        dotsContainer.appendChild(dot);
-      }
-      loadingContainer.appendChild(dotsContainer);
+      // Add the loader element.
+      const loader = document.createElement('div');
+      loader.classList.add('loader');
+      loadingContainer.appendChild(loader);
+      
+      // Add a Stop button.
+      const stopButton = document.createElement('button');
+      stopButton.textContent = "Stop";
+      stopButton.style.marginTop = "10px";
+      stopButton.style.padding = "5px 10px";
+      stopButton.style.fontSize = "12px";
+      stopButton.onclick = () => { stopRequested = true; };
+      loadingContainer.appendChild(stopButton);
+      
       chatLog.appendChild(loadingContainer);
       chatLog.scrollTop = chatLog.scrollHeight;
-      
-      // Animate the "Thinking..." text letter-by-letter.
-      animateTyping(thinkingText, "Thinking...", false, null);
       return loadingContainer;
     }
 
-    // Animate bot messages (both text and code) sequentially.
+    // Animate bot messages by splitting into text and code segments.
     function animateBotMessage(response) {
       const container = document.createElement('div');
       container.classList.add('chat-message', 'bot');
       chatLog.appendChild(container);
       chatLog.scrollTop = chatLog.scrollHeight;
       
-      // Split response into segments by code fences (```language\ncode\n```)
+      // Split response into segments using code fences (```language\ncode\n```)
       let segments = [];
       let lastIndex = 0;
       const codeRegex = /```(\w+)?\n([\s\S]*?)```/g;
@@ -334,7 +422,7 @@
         segments.push({ type: 'text', content: response.substring(lastIndex) });
       }
       
-      // Animate each segment sequentially.
+      // Animate segments sequentially.
       function animateSegment(index) {
         if (index >= segments.length) return;
         const segment = segments[index];
@@ -343,9 +431,8 @@
           container.appendChild(textElem);
           animateTyping(textElem, segment.content, false, () => animateSegment(index + 1));
         } else if (segment.type === 'code') {
-          // Create a code block container.
           const codeContainer = document.createElement('div');
-          codeContainer.classList.add('code-block-container');
+          codeContainer.classList.add('code-block-container', 'fade-in');
           
           const codeHeader = document.createElement('div');
           codeHeader.classList.add('code-block-header');
@@ -367,9 +454,7 @@
           copyButton.addEventListener('click', () => {
             navigator.clipboard.writeText(segment.content);
           });
-          
           animateTyping(codeElem, segment.content, true, () => {
-            // Finalize syntax highlighting with Prism.
             Prism.highlightElement(codeElem);
             animateSegment(index + 1);
           });
@@ -385,7 +470,7 @@
       addMessage(userMessage, 'user');
       chatInput.value = '';
       
-      // Show the "Thinking..." indicator.
+      stopRequested = false;
       const loadingIndicator = showLoadingIndicator();
       
       try {
@@ -417,6 +502,7 @@
       const formData = new FormData();
       formData.append('file', file);
       
+      stopRequested = false;
       const loadingIndicator = showLoadingIndicator();
       try {
         const response = await fetch('/upload', {
@@ -436,19 +522,13 @@
       }
     }
 
-    // Utility: Add a simple message (for user messages).
-    function addMessage(message, userType) {
-      const messageDiv = document.createElement('div');
-      messageDiv.classList.add('chat-message', userType, 'fade-in');
-      messageDiv.innerHTML = message;
-      chatLog.appendChild(messageDiv);
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
     sendButton.addEventListener('click', sendMessage);
     chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     uploadButton.addEventListener('click', () => { fileInput.click(); });
-    fileInput.addEventListener('change', () => { const file = fileInput.files[0]; if (file) uploadFile(file); });
+    fileInput.addEventListener('change', () => { 
+      const file = fileInput.files[0]; 
+      if (file) uploadFile(file); 
+    });
   </script>
 </body>
 </html>
