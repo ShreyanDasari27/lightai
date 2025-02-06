@@ -56,7 +56,7 @@
       flex-direction: column;
       gap: 20px;
     }
-    /* Center all message bubbles */
+    /* Centered message bubbles */
     .chat-message {
       background-color: #3c3c3c;
       padding: 15px;
@@ -66,12 +66,10 @@
       text-align: center;
       word-wrap: break-word;
     }
-    /* User messages: lighter gray text */
     .chat-message.user {
       background-color: #444;
       color: #cccccc;
     }
-    /* AI messages: slightly brighter text */
     .chat-message.bot {
       background-color: #2d2d2d;
       color: #e8e8e8;
@@ -138,29 +136,29 @@
     .loading span:nth-child(1) { animation-delay: 0s; }
     .loading span:nth-child(2) { animation-delay: 0.2s; }
     .loading span:nth-child(3) { animation-delay: 0.4s; }
-    /* Section header styling */
+    /* Title styling for headers */
     .section-title {
+      font-size: 24px;
       font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 5px;
+      color: #ffffff;
+      margin-bottom: 10px;
       text-align: center;
     }
-    /* Indented block for text below section headers */
+    /* Indented block for text below titles */
     .indented {
       margin-left: 20px;
       text-align: left;
     }
-    /* Key points styling */
+    /* Bullet list styling */
     .key-points {
-      margin-top: 5px;
-      margin-bottom: 15px;
+      list-style-type: disc;
       padding-left: 20px;
       text-align: left;
     }
     .key-points li {
       margin-bottom: 5px;
     }
-    /* Code block styling with VSCode-like theme */
+    /* Code block styling (VSCode/ChatGPT style) */
     .code-block-container {
       background-color: #1e1e1e;
       border: 1px solid #333;
@@ -197,7 +195,7 @@
       white-space: pre-wrap;
       min-height: 50px;
     }
-    /* Basic syntax highlighting rules */
+    /* Syntax highlighting classes */
     .keyword { color: #569cd6; }
     .string { color: #ce9178; }
     .comment { color: #6a9955; }
@@ -243,7 +241,7 @@
     const uploadButton = document.getElementById('uploadButton');
     const fileInput = document.getElementById('fileInput');
 
-    // Standard message insertion for user messages (no animation)
+    // Inserts a simple message for user texts.
     function addMessage(message, userType) {
       const messageDiv = document.createElement('div');
       messageDiv.classList.add('chat-message', userType);
@@ -253,7 +251,7 @@
     }
 
     // Animate text letter-by-letter.
-    // For code blocks, once complete, apply syntax highlighting.
+    // When finished, format it appropriately.
     function animateTyping(element, text, isCode, callback) {
       element.textContent = "";
       let i = 0;
@@ -265,6 +263,7 @@
         if (i >= text.length) {
           clearInterval(interval);
           if (isCode) {
+            // Apply syntax highlighting to code blocks
             element.innerHTML = syntaxHighlight(element.textContent);
           } else {
             element.innerHTML = formatResponse(text);
@@ -274,28 +273,29 @@
       }, typingSpeed);
     }
 
-    // Animate bot message, splitting code blocks (delineated by ```)
+    // Animate a bot message by splitting text and code segments.
     function animateBotMessage(message) {
-      const messageDiv = document.createElement('div');
-      messageDiv.classList.add('chat-message', 'bot');
-      chatLog.appendChild(messageDiv);
+      const container = document.createElement('div');
+      container.classList.add('chat-message', 'bot');
+      chatLog.appendChild(container);
       chatLog.scrollTop = chatLog.scrollHeight;
 
       if (message.includes("```")) {
-        // Split message into segments; odd segments are code
-        let segments = message.split(/```/);
+        const segments = message.split(/```/);
         let index = 0;
         function animateNextSegment() {
           if (index < segments.length) {
-            let segment = segments[index];
+            const segment = segments[index];
             if (index % 2 === 0) {
-              // Animate normal text segment
-              animateTyping(messageDiv, segment, false, () => {
+              // Normal text segment.
+              const textElem = document.createElement('div');
+              container.appendChild(textElem);
+              animateTyping(textElem, segment, false, () => {
                 index++;
                 animateNextSegment();
               });
             } else {
-              // Create code block container
+              // Code segment.
               const codeContainer = document.createElement('div');
               codeContainer.classList.add('code-block-container');
 
@@ -306,16 +306,17 @@
               const copyButton = document.createElement('button');
               copyButton.classList.add('copy-button');
               copyButton.innerText = 'Copy';
-              copyButton.addEventListener('click', function() {
-                navigator.clipboard.writeText(codeContent.textContent);
-              });
               codeHeader.appendChild(copyButton);
               codeContainer.appendChild(codeHeader);
 
               const codeContent = document.createElement('pre');
               codeContent.classList.add('code-content');
               codeContainer.appendChild(codeContent);
-              messageDiv.appendChild(codeContainer);
+              container.appendChild(codeContainer);
+
+              copyButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(codeContent.innerText);
+              });
 
               animateTyping(codeContent, segment, true, () => {
                 index++;
@@ -326,19 +327,36 @@
         }
         animateNextSegment();
       } else {
-        animateTyping(messageDiv, message, false);
+        const textElem = document.createElement('div');
+        container.appendChild(textElem);
+        animateTyping(textElem, message, false);
       }
     }
 
-    // Basic formatting: converts *text* to bold, handles section headers and bullet lists.
+    // Format a response string into HTML with titles, paragraphs, and bullet lists.
     function formatResponse(response) {
       const lines = response.split('\n');
       let html = "";
       let inIndentBlock = false;
+      let bulletBuffer = [];
+
+      const flushBullets = () => {
+        if (bulletBuffer.length) {
+          html += '<ul class="key-points">';
+          bulletBuffer.forEach(bullet => {
+            html += `<li>${bullet}</li>`;
+          });
+          html += '</ul>';
+          bulletBuffer = [];
+        }
+      };
+
       lines.forEach(line => {
         line = line.trim();
+        // Convert *text* to bold.
         line = line.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
         if (line.startsWith("###")) {
+          flushBullets();
           if (inIndentBlock) {
             html += "</div>";
             inIndentBlock = false;
@@ -349,28 +367,31 @@
           inIndentBlock = true;
         } else if (line.startsWith("-")) {
           const bullet = line.replace("-", "").trim();
-          html += `<ul class="key-points"><li>${bullet}</li></ul>`;
+          bulletBuffer.push(bullet);
         } else if (line === "") {
+          flushBullets();
           html += `<br>`;
         } else {
+          flushBullets();
           html += `<p>${line}</p>`;
         }
       });
+      flushBullets();
       if (inIndentBlock) {
         html += "</div>";
       }
       return html;
     }
 
-    // A simple syntax highlighter for code, using regex replacements.
+    // A simple syntax highlighter using regex replacements.
     function syntaxHighlight(code) {
-      // Escape HTML entities
+      // Escape HTML entities.
       code = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      // Highlight single-line comments
+      // Highlight single-line comments.
       code = code.replace(/(\/\/.*?$)/gm, '<span class="comment">$1</span>');
-      // Highlight strings (both single and double quotes)
+      // Highlight strings.
       code = code.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="string">$&</span>');
-      // Highlight common keywords (adjust as needed)
+      // Highlight common keywords.
       const keywords = ["function", "const", "let", "var", "if", "else", "return", "import", "from", "class", "new", "for", "while", "switch", "case", "break", "async", "await"];
       const keywordRegex = new RegExp('\\b(' + keywords.join('|') + ')\\b', 'g');
       code = code.replace(keywordRegex, '<span class="keyword">$1</span>');
