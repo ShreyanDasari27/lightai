@@ -2,10 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Ensures proper scaling on mobile devices -->
+  <!-- For proper scaling on mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LightAi v5</title>
+  <!-- PrismJS for syntax highlighting (VSCode Tomorrow theme) -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <!-- MarkedJS for Markdown parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
   <style>
+    /* Base styles */
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -56,14 +62,14 @@
       flex-direction: column;
       gap: 20px;
     }
-    /* Centered message bubbles */
+    /* Message bubble styling – all centered */
     .chat-message {
       background-color: #3c3c3c;
       padding: 15px;
       border-radius: 10px;
       max-width: 80%;
       margin: 10px auto;
-      text-align: center;
+      text-align: left;
       word-wrap: break-word;
     }
     .chat-message.user {
@@ -100,7 +106,7 @@
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
       margin-right: 10px;
     }
     .chat-input-container button:hover {
@@ -136,7 +142,7 @@
     .loading span:nth-child(1) { animation-delay: 0s; }
     .loading span:nth-child(2) { animation-delay: 0.2s; }
     .loading span:nth-child(3) { animation-delay: 0.4s; }
-    /* Title styling for headers */
+    /* Markdown styling for explanations */
     .section-title {
       font-size: 24px;
       font-weight: bold;
@@ -144,21 +150,12 @@
       margin-bottom: 10px;
       text-align: center;
     }
-    /* Indented block for text below titles */
-    .indented {
-      margin-left: 20px;
-      text-align: left;
-    }
-    /* Bullet list styling */
+    .indented { margin-left: 20px; }
     .key-points {
       list-style-type: disc;
       padding-left: 20px;
-      text-align: left;
     }
-    .key-points li {
-      margin-bottom: 5px;
-    }
-    /* Code block styling (VSCode/ChatGPT style) */
+    /* Code block styling (emulating ChatGPT/VSCode) */
     .code-block-container {
       background-color: #1e1e1e;
       border: 1px solid #333;
@@ -167,7 +164,6 @@
       max-width: 80%;
       overflow: hidden;
       font-family: Consolas, "Courier New", monospace;
-      text-align: left;
       position: relative;
     }
     .code-block-header {
@@ -189,16 +185,19 @@
     }
     .code-content {
       background-color: #1e1e1e;
-      color: #d4d4d4;
       padding: 10px;
       overflow-x: auto;
       white-space: pre-wrap;
       min-height: 50px;
     }
-    /* Syntax highlighting classes */
-    .keyword { color: #569cd6; }
-    .string { color: #ce9178; }
-    .comment { color: #6a9955; }
+    /* Fade-in animation */
+    .fade-in {
+      animation: fadeIn 0.5s forwards;
+      opacity: 0;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .main-content { flex-direction: column; }
@@ -219,7 +218,7 @@
       </div>
       <div class="chat-container">
         <div class="chat-log" id="chatLog">
-          <div class="chat-message bot">
+          <div class="chat-message bot fade-in">
             I am LightAI, your assistant. How can I help you today?
           </div>
         </div>
@@ -241,171 +240,99 @@
     const uploadButton = document.getElementById('uploadButton');
     const fileInput = document.getElementById('fileInput');
 
-    // Inserts a simple message for user texts.
+    // Fade-in helper: adds the 'fade-in' class to newly added elements
+    function applyFadeIn(element) {
+      element.classList.add('fade-in');
+    }
+
+    // Append a simple message (user messages)
     function addMessage(message, userType) {
       const messageDiv = document.createElement('div');
-      messageDiv.classList.add('chat-message', userType);
+      messageDiv.classList.add('chat-message', userType, 'fade-in');
       messageDiv.innerHTML = message;
       chatLog.appendChild(messageDiv);
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Animate text letter-by-letter.
-    // When finished, format it appropriately.
-    function animateTyping(element, text, isCode, callback) {
-      element.textContent = "";
-      let i = 0;
-      const typingSpeed = 30; // milliseconds per character
-      const interval = setInterval(() => {
-        element.textContent += text.charAt(i);
-        i++;
-        chatLog.scrollTop = chatLog.scrollHeight;
-        if (i >= text.length) {
-          clearInterval(interval);
-          if (isCode) {
-            // Apply syntax highlighting to code blocks
-            element.innerHTML = syntaxHighlight(element.textContent);
-          } else {
-            element.innerHTML = formatResponse(text);
-          }
-          if (callback) callback();
-        }
-      }, typingSpeed);
-    }
-
-    // Animate a bot message by splitting text and code segments.
-    function animateBotMessage(message) {
+    // Animate bot message using segment-by-segment fade-in.
+    // This function splits the response by code fences (which may include a language specifier)
+    function animateBotMessage(response) {
       const container = document.createElement('div');
       container.classList.add('chat-message', 'bot');
       chatLog.appendChild(container);
       chatLog.scrollTop = chatLog.scrollHeight;
 
-      if (message.includes("```")) {
-        const segments = message.split(/```/);
-        let index = 0;
-        function animateNextSegment() {
-          if (index < segments.length) {
-            const segment = segments[index];
-            if (index % 2 === 0) {
-              // Normal text segment.
-              const textElem = document.createElement('div');
-              container.appendChild(textElem);
-              animateTyping(textElem, segment, false, () => {
-                index++;
-                animateNextSegment();
-              });
-            } else {
-              // Code segment.
-              const codeContainer = document.createElement('div');
-              codeContainer.classList.add('code-block-container');
-
-              const codeHeader = document.createElement('div');
-              codeHeader.classList.add('code-block-header');
-              codeHeader.innerHTML = '<span>Code Output</span>';
-
-              const copyButton = document.createElement('button');
-              copyButton.classList.add('copy-button');
-              copyButton.innerText = 'Copy';
-              codeHeader.appendChild(copyButton);
-              codeContainer.appendChild(codeHeader);
-
-              const codeContent = document.createElement('pre');
-              codeContent.classList.add('code-content');
-              codeContainer.appendChild(codeContent);
-              container.appendChild(codeContainer);
-
-              copyButton.addEventListener('click', () => {
-                navigator.clipboard.writeText(codeContent.innerText);
-              });
-
-              animateTyping(codeContent, segment, true, () => {
-                index++;
-                animateNextSegment();
-              });
-            }
-          }
+      // Split response using regex for code blocks: ```lang\ncode\n```
+      let segments = [];
+      let lastIndex = 0;
+      const codeRegex = /```(\w+)?\n([\s\S]*?)```/g;
+      let match;
+      while ((match = codeRegex.exec(response)) !== null) {
+        if (match.index > lastIndex) {
+          segments.push({ type: 'text', content: response.substring(lastIndex, match.index) });
         }
-        animateNextSegment();
-      } else {
-        const textElem = document.createElement('div');
-        container.appendChild(textElem);
-        animateTyping(textElem, message, false);
+        segments.push({ type: 'code', language: match[1] || 'none', content: match[2] });
+        lastIndex = codeRegex.lastIndex;
       }
-    }
+      if (lastIndex < response.length) {
+        segments.push({ type: 'text', content: response.substring(lastIndex) });
+      }
 
-    // Format a response string into HTML with titles, paragraphs, and bullet lists.
-    function formatResponse(response) {
-      const lines = response.split('\n');
-      let html = "";
-      let inIndentBlock = false;
-      let bulletBuffer = [];
+      // Reveal segments one by one with a slight delay
+      let delay = 0;
+      segments.forEach(segment => {
+        setTimeout(() => {
+          if (segment.type === 'text') {
+            // Use Marked.js to parse Markdown for explanation and formatting
+            const html = marked.parse(segment.content);
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            applyFadeIn(div);
+            container.appendChild(div);
+          } else if (segment.type === 'code') {
+            // Create a code block container with header and copy button
+            const codeContainer = document.createElement('div');
+            codeContainer.classList.add('code-block-container', 'fade-in');
 
-      const flushBullets = () => {
-        if (bulletBuffer.length) {
-          html += '<ul class="key-points">';
-          bulletBuffer.forEach(bullet => {
-            html += `<li>${bullet}</li>`;
-          });
-          html += '</ul>';
-          bulletBuffer = [];
-        }
-      };
+            const codeHeader = document.createElement('div');
+            codeHeader.classList.add('code-block-header');
+            codeHeader.innerHTML = `<span>Code Output (${segment.language})</span>`;
 
-      lines.forEach(line => {
-        line = line.trim();
-        // Convert *text* to bold.
-        line = line.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
-        if (line.startsWith("###")) {
-          flushBullets();
-          if (inIndentBlock) {
-            html += "</div>";
-            inIndentBlock = false;
+            const copyButton = document.createElement('button');
+            copyButton.classList.add('copy-button');
+            copyButton.innerText = 'Copy';
+            codeHeader.appendChild(copyButton);
+            codeContainer.appendChild(codeHeader);
+
+            const pre = document.createElement('pre');
+            const code = document.createElement('code');
+            code.className = 'language-' + segment.language;
+            code.textContent = segment.content;
+            pre.appendChild(code);
+            codeContainer.appendChild(pre);
+            container.appendChild(codeContainer);
+            copyButton.addEventListener('click', () => {
+              navigator.clipboard.writeText(segment.content);
+            });
+            // Run Prism to highlight the code
+            Prism.highlightElement(code);
           }
-          const headerText = line.replace("###", "").trim();
-          html += `<div class="section-title">${headerText}</div>`;
-          html += `<div class="indented">`;
-          inIndentBlock = true;
-        } else if (line.startsWith("-")) {
-          const bullet = line.replace("-", "").trim();
-          bulletBuffer.push(bullet);
-        } else if (line === "") {
-          flushBullets();
-          html += `<br>`;
-        } else {
-          flushBullets();
-          html += `<p>${line}</p>`;
-        }
+          chatLog.scrollTop = chatLog.scrollHeight;
+        }, delay);
+        delay += 500; // Adjust delay (in ms) between segments as desired
       });
-      flushBullets();
-      if (inIndentBlock) {
-        html += "</div>";
-      }
-      return html;
     }
 
-    // A simple syntax highlighter using regex replacements.
-    function syntaxHighlight(code) {
-      // Escape HTML entities.
-      code = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      // Highlight single-line comments.
-      code = code.replace(/(\/\/.*?$)/gm, '<span class="comment">$1</span>');
-      // Highlight strings.
-      code = code.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="string">$&</span>');
-      // Highlight common keywords.
-      const keywords = ["function", "const", "let", "var", "if", "else", "return", "import", "from", "class", "new", "for", "while", "switch", "case", "break", "async", "await"];
-      const keywordRegex = new RegExp('\\b(' + keywords.join('|') + ')\\b', 'g');
-      code = code.replace(keywordRegex, '<span class="keyword">$1</span>');
-      return code;
-    }
-
+    // Handle sending of a user message
     async function sendMessage() {
       const userMessage = chatInput.value.trim();
       if (!userMessage) return;
       addMessage(userMessage, 'user');
       chatInput.value = '';
 
+      // Show a loading indicator
       const loadingDiv = document.createElement('div');
-      loadingDiv.classList.add('loading');
+      loadingDiv.classList.add('loading', 'fade-in');
       loadingDiv.innerHTML = '<span>.</span><span>.</span><span>.</span>';
       chatLog.appendChild(loadingDiv);
       chatLog.scrollTop = chatLog.scrollHeight;
@@ -425,6 +352,7 @@
       }
     }
 
+    // Handle file upload (images or text files)
     async function uploadFile(file) {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
@@ -438,7 +366,7 @@
       const formData = new FormData();
       formData.append('file', file);
       const loadingDiv = document.createElement('div');
-      loadingDiv.classList.add('loading');
+      loadingDiv.classList.add('loading', 'fade-in');
       loadingDiv.innerHTML = '<span>.</span><span>.</span><span>.</span>';
       chatLog.appendChild(loadingDiv);
       chatLog.scrollTop = chatLog.scrollHeight;
